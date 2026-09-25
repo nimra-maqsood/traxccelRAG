@@ -1,0 +1,11 @@
+lancedb 
+tantivy 
+agno
+openai
+python-dotenv
+aiofiles
+unstructured-markdown
+pandas
+pylance
+sqlalchemy
+chromadb

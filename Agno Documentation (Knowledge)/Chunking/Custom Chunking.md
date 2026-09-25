@@ -1,0 +1,98 @@
+# Custom Chunking
+
+Custom chunking allows you to implement your own chunking strategy by creating a class that inherits from `ChunkingStrategy`. This is useful when you need to split documents based on specific separators, apply custom logic, or handle domain-specific content formats.
+
+<Steps>
+  <Step title="Create a Python file">
+    ```bash  theme={null}
+    touch custom_chunking.py
+    ```
+  </Step>
+
+  <Step title="Add the following code to your Python file">
+    ```python custom_chunking.py theme={null}
+    from typing import List
+    import asyncio
+    from agno.agent import Agent
+    from agno.knowledge.chunking.base import ChunkingStrategy
+    from agno.knowledge.content import Document
+    from agno.knowledge.knowledge import Knowledge
+    from agno.knowledge.reader.pdf_reader import PDFReader
+    from agno.vectordb.pgvector import PgVector
+
+    class CustomChunking(ChunkingStrategy):
+        def __init__(self, separator: str = "---", **kwargs):
+            self.separator = separator
+
+        def chunk(self, document: Document) -> List[Document]:
+            # Split by custom separator
+            chunks = document.content.split(self.separator)
+
+            result = []
+            for i, chunk_content in enumerate(chunks):
+                chunk_content = self.clean_text(chunk_content)  # Use inherited method
+                if chunk_content:
+                    meta_data = document.meta_data.copy()
+                    meta_data["chunk"] = i + 1
+                    result.append(Document(
+                        id=f"{document.id}_{i+1}" if document.id else None,
+                        name=document.name,
+                        meta_data=meta_data,
+                        content=chunk_content
+                    ))
+            return result
+
+    db_url = "postgresql+psycopg://ai:ai@localhost:5532/ai"
+
+    knowledge = Knowledge(
+        vector_db=PgVector(table_name="recipes_custom_chunking", db_url=db_url),
+    )
+
+    asyncio.run(knowledge.add_content_async(
+        url="https://agno-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf",
+        reader=PDFReader(
+            name="Custom Chunking Reader",
+            chunking_strategy=CustomChunking(separator="---"),
+        ),
+    ))
+
+    agent = Agent(
+        knowledge=knowledge,
+        search_knowledge=True,
+    )
+
+    agent.print_response("How to make Thai curry?", markdown=True)
+    ```
+  </Step>
+
+  <Snippet file="create-venv-step.mdx" />
+
+  <Step title="Install libraries">
+    ```bash  theme={null}
+    pip install -U sqlalchemy psycopg pgvector agno
+    ```
+  </Step>
+
+  <Snippet file="run-pgvector-step.mdx" />
+
+  <Step title="Run the script">
+    <CodeGroup>
+      ```bash Mac theme={null}
+      python custom_chunking.py
+      ```
+
+      ```bash Windows theme={null}
+      python custom_chunking.py
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Custom Chunking Params
+
+<Snippet file="chunking-custom.mdx" />
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://docs.agno.com/llms.txt
